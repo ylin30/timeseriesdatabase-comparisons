@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/liu0x54/timeseriesdatabase-comparisons/util/report"
-	"github.com/klauspost/compress/gzip"
+	//"github.com/klauspost/compress/gzip"
 )
 
 type OpenTsdbBulkLoad struct {
@@ -163,7 +163,7 @@ func (l *OpenTsdbBulkLoad) RunScanner(r io.Reader, syncChanDone chan int) {
 	l.bytesRead = 0
 	l.valuesRead = 0
 	buf := l.bufPool.Get().(*bytes.Buffer)
-	zw := gzip.NewWriter(buf)
+	zw := bufio.NewWriter(buf)
 
 	var n int
 
@@ -195,12 +195,13 @@ outer:
 		if n >= bulk_load.Runner.BatchSize {
 			zw.Write(newline)
 			zw.Write(closebracket)
-			zw.Close()
+			//zw.Close()
+			zw.Flush()
 
 			l.batchChan <- buf
 
 			buf = l.bufPool.Get().(*bytes.Buffer)
-			zw = gzip.NewWriter(buf)
+			zw = bufio.NewWriter(buf)
 			zw.Write(openbracket)
 			zw.Write(newline)
 			n = 0
@@ -225,7 +226,7 @@ outer:
 	if n > 0 {
 		zw.Write(newline)
 		zw.Write(closebracket)
-		zw.Close()
+		zw.Flush()
 		l.batchChan <- buf
 	}
 
