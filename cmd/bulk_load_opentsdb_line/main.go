@@ -195,6 +195,9 @@ outer:
 		zw.Write(line[:len(line)-9])
 		//zw.Write(scanner.Bytes())
 
+                // Count how many data points
+                l.valuesRead += int64(countFields(string(line)))
+
 		n++
 		if n >= bulk_load.Runner.BatchSize {
 			zw.Write(newline)
@@ -293,4 +296,16 @@ func (l *OpenTsdbBulkLoad) processBackoffMessages() {
 // TODO(rw): listDatabases lists the existing data in OpenTSDB.
 func listDatabases(daemonUrl string) ([]string, error) {
 	return nil, nil
+}
+
+func countFields(line string) int {
+        lineParts := strings.Split(line," ") // "measurement,tags fields timestamp"
+        if len(lineParts) != 3 {
+                log.Fatalf("invalid protocol line: '%s'", line)
+        }
+        fieldCnt := strings.Count(lineParts[1], "=")
+        if fieldCnt == 0 {
+                log.Fatalf("invalid fields parts: '%s'", lineParts[1])
+        }
+        return fieldCnt
 }
