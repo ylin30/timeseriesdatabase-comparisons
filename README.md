@@ -1,4 +1,4 @@
-# Performance comparisons between InfluxDB and TDengine
+# Performance comparisons between InfluxDB, TDengine, and TickTock
 This project is a fork of [InfluxDB comparisions project](https://github.com/influxdata/influxdb-comparisons). The testing methodology and test procedure keeps the same as origin project and we just extend the data loading/quering module to support TDengine format and add serveral query test cases. Detailed testing methodology and procedure please refer to the origin project.
 
 Briefly, this comparision test generates devops data and writes into different format, and loads into the database accordingly, then perform the same queries, finally counts the time consumed.
@@ -9,6 +9,7 @@ Current databases supported:
 
 + InfluxDB
 + TDengine
++ TickTock
 
 ## Prerequisite
 
@@ -207,4 +208,50 @@ wall clock time: 5.172598sec
        InfluxDB           |       5.17 Seconds    
        TDengine           |       1.98 Seconds    
 ------------------------------------------------------
+```
+
+==========================================================
+To support TickTock:
+1. Compile
+```
+ylin30@yi-IdeaPad:~/go/src/timeseriesdatabase-comparisons/cmd/bulk_data_gen$ go build
+ylin30@yi-IdeaPad:~/go/src/timeseriesdatabase-comparisons/cmd/bulk_data_gen$ cd ../bulk_load_opentsdb_line/
+ylin30@yi-IdeaPad:~/go/src/timeseriesdatabase-comparisons/cmd/bulk_load_opentsdb_line$ go build
+ylin30@yi-IdeaPad:~/go/src/timeseriesdatabase-comparisons/cmd/bulk_load_opentsdb_line$ cd ../bulk_load_opentsdb_plain/
+ylin30@yi-IdeaPad:~/go/src/timeseriesdatabase-comparisons/cmd/bulk_load_opentsdb_plain$ go build
+```
+2. Generate data:
+To generate influxdb line protocol data:
+
+```
+~/go/src/timeseriesdatabase-comparisons/cmd/bulk_data_gen/bulk_data_gen -seed 123 -format influx-bulk -sampling-interval 1s -scale-var 100 -use-case devops -timestamp-start "2018-01-01T00:00:00Z" -timestamp-end "2018-01-07T00:00:00Z" > /tmp/influx-line-bulk.dat
+```
+
+To generate opentsdb plain input data:
+```
+~/go/src/timeseriesdatabase-comparisons/cmd/bulk_data_gen/bulk_data_gen -seed 123 -format opentsdb-plain -sampling-interval 1s -scale-var 100 -use-case devops -timestamp-start "2018-01-01T00:00:00Z" -timestamp-end "2018-01-07T00:00:00Z" > /tmp/opentsdb_plain.dat
+```
+
+3. Load data to TickTock:
+
+To load influxdb line protocol data to TT: (Note that TT must be running and with second precision).
+```
+cat /tmp/influx-line-bulk.dat | ~/go/src/timeseriesdatabase-comparisons/cmd/bulk_load_opentsdb_line/bulk_load_opentsdb_line -urls "http://localhost:6182" -workers 10 -batch-size 100
+```
+
+To load opentsdb plain input data to TT:
+```
+cat /tmp/opentsdb_plain.dat | ~/go/src/timeseriesdatabase-comparisons/cmd/bulk_load_opentsdb/bulk_load_opentsdb -urls "http://localhost:6182" -workers 100 -batch-size 100
+```
+
+4. You can combine 2 & 3 in one command (Suggested):
+
+To generate influxdb line protocl data and load to TT:
+```
+~/go/src/timeseriesdatabase-comparisons/cmd/bulk_data_gen/bulk_data_gen -seed 123 -format influx-bulk -sampling-interval 1s -scale-var 100 -use-case devops -timestamp-start "2018-01-01T00:00:00Z" -timestamp-end "2018-01-07T00:00:00Z" | ~/go/src/timeseriesdatabase-comparisons/cmd/bulk_load_opentsdb_line/bulk_load_opentsdb_line -urls "http://localhost:6182" -workers 10 -batch-size 100
+```
+
+To generate opentsdb plain data and load to TT:
+```
+~/go/src/timeseriesdatabase-comparisons/cmd/bulk_data_gen/bulk_data_gen -seed 123 -format opentsdb-plain -sampling-interval 1s -scale-var 100 -use-case devops -timestamp-start "2018-01-01T00:00:00Z" -timestamp-end "2018-01-07T00:00:00Z" | ~/go/src/timeseriesdatabase-comparisons/cmd/bulk_load_opentsdb/bulk_load_opentsdb -urls "http://localhost:6182" -workers 100 -batch-size 100
 ```
