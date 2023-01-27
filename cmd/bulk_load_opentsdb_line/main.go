@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/liu0x54/timeseriesdatabase-comparisons/util/report"
-	//"github.com/klauspost/compress/gzip"
+	"github.com/klauspost/compress/gzip"
 )
 
 type OpenTsdbBulkLoad struct {
@@ -163,17 +163,12 @@ func (l *OpenTsdbBulkLoad) RunScanner(r io.Reader, syncChanDone chan int) {
 	l.bytesRead = 0
 	l.valuesRead = 0
 	buf := l.bufPool.Get().(*bytes.Buffer)
-	zw := bufio.NewWriter(buf)
+	//zw := bufio.NewWriter(buf)
+	zw := gzip.NewWriter(buf)
 
 	var n int
 
-	//openbracket := []byte("[")
-	//closebracket := []byte("]")
-	//commaspace := []byte(", ")
 	newline := []byte("\n")
-
-	//zw.Write(openbracket)
-	//zw.Write(newline)
 
 	scanner := bufio.NewScanner(bufio.NewReaderSize(r, 4*1024*1024))
 
@@ -185,7 +180,6 @@ outer:
 	for scanner.Scan() {
 		l.itemsRead++
 		if n > 0 {
-			//zw.Write(commaspace)
 			zw.Write(newline)
 		}
 
@@ -201,16 +195,14 @@ outer:
 		n++
 		if n >= bulk_load.Runner.BatchSize {
 			zw.Write(newline)
-			//zw.Write(closebracket)
-			//zw.Close()
-			zw.Flush()
+			zw.Close()
+			//zw.Flush()
 
 			l.batchChan <- buf
 
 			buf = l.bufPool.Get().(*bytes.Buffer)
-			zw = bufio.NewWriter(buf)
-			//zw.Write(openbracket)
-			//zw.Write(newline)
+			//zw = bufio.NewWriter(buf)
+			zw = gzip.NewWriter(buf)
 			n = 0
 			if bulk_load.Runner.TimeLimit > 0 && time.Now().After(deadline) {
 				bulk_load.Runner.SetPrematureEnd("Timeout elapsed")
@@ -232,8 +224,8 @@ outer:
 	// Finished reading input, make sure last batch goes out.
 	if n > 0 {
 		zw.Write(newline)
-		//zw.Write(closebracket)
-		zw.Flush()
+		zw.Close()
+                //zw.Flush()
 		l.batchChan <- buf
 	}
 

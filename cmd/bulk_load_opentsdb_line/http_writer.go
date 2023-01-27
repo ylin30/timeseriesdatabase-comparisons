@@ -60,7 +60,7 @@ var (
 func (w *HTTPWriter) WriteLineProtocol(body []byte) (int64, error) {
 	req := fasthttp.AcquireRequest()
 	req.Header.SetContentTypeBytes(applicationJsonHeader)
-	//req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set("Content-Encoding", "gzip")
 	req.Header.SetMethodBytes(post)
 	req.Header.SetRequestURIBytes(w.url)
 	req.SetBody(body)
